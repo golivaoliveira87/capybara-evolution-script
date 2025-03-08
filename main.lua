@@ -42,6 +42,8 @@ local function StartKillAura()
         local AttackRange = 100
         local CooldownTime = 0.1
         local CurrentTarget = nil
+        local IsMoving = false
+        local LastPosition = RootPart.Position  
 
         local function GetClosestEnemy()
             local closestEnemy = nil
