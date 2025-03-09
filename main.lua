@@ -36,6 +36,8 @@ local function StartKillAura()
         local AttackRange = 10 -- Alcance de ataque
         local CooldownTime = 0.1
         local targetHRP = nil
+        local num_nil_targets = 0
+        local lastSearchTime = 0 -- Rastreia o momento da última busca por inimigos
 
         local function GetEnemyInFront()
             local myPosition = RootPart.Position
@@ -66,7 +68,21 @@ local function StartKillAura()
 
             -- Verifica se o alvo atual é inválido ou morto
             if not targetHRP or not targetHRP.hrp or not targetHRP.hrp.Parent or targetHRP.humanoid.Health <= 0 then
-                targetHRP = GetEnemyInFront()
+                -- Busca um novo inimigo apenas se passou tempo suficiente desde a última busca
+                if tick() - lastSearchTime > 2 then
+                    targetHRP = GetEnemyInFront()
+                    lastSearchTime = tick() -- Atualiza o momento da última busca
+
+                    if not targetHRP then
+                        num_nil_targets = num_nil_targets + 1
+                        if num_nil_targets >= 2 then
+                            num_nil_targets = 0
+                            task.wait(5) -- Espera 5 segundos antes de buscar novamente
+                        end
+                    else
+                        num_nil_targets = 0 -- Reseta o contador se um inimigo for encontrado
+                    end
+                end
             end
 
             -- Ataca o alvo se ele for válido
