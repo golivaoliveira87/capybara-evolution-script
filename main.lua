@@ -33,47 +33,46 @@ local function StartKillAura()
             return
         end
 
-        local AttackRange = 100
+        local AttackRange = 10 -- Alcance de ataque
         local CooldownTime = 0.1
-        local CurrentTarget = nil  
+        local targetHRP = nil
 
-        local function GetClosestEnemy()
-            local closestEnemy, minDistance
+        local function GetEnemyInFront()
             local myPosition = RootPart.Position
+            local myLookVector = RootPart.CFrame.LookVector
 
-            for _, obj in ipairs(Workspace:GetChildren()) do
+            for _, obj in ipairs(Workspace:GetDescendants()) do
                 if obj:IsA("Model") and obj ~= Character then
                     local humanoid = obj:FindFirstChildOfClass("Humanoid")
                     local hrp = obj:FindFirstChild("HumanoidRootPart") or obj:FindFirstChild("Head")
 
                     if humanoid and humanoid.Health > 0 and hrp then
+                        local directionToEnemy = (hrp.Position - myPosition).unit
+                        local dotProduct = directionToEnemy:Dot(myLookVector)
                         local distance = (hrp.Position - myPosition).Magnitude
-                        if not minDistance or distance < minDistance and distance <= AttackRange then
-                            closestEnemy = { hrp = hrp, humanoid = humanoid }
-                            minDistance = distance
+
+                        -- Verifica se o inimigo está na frente e dentro do alcance
+                        if dotProduct > 0.8 and distance <= AttackRange then
+                            return { hrp = hrp, humanoid = humanoid }
                         end
                     end
                 end
             end
-            return closestEnemy
+            return nil
         end
 
         while task.wait(CooldownTime) do
-            if not RootPart.Parent then break end
+            if not RootPart or not RootPart.Parent then break end
 
-            -- Se não há alvo ou o alvo morreu, busca um novo
-            if not CurrentTarget or CurrentTarget.humanoid.Health <= 0 or (CurrentTarget.hrp.Position - RootPart.Position).Magnitude > AttackRange then
-                CurrentTarget = GetClosestEnemy()
+            -- Verifica se o alvo atual é inválido ou morto
+            if not targetHRP or not targetHRP.hrp or not targetHRP.hrp.Parent or targetHRP.humanoid.Health <= 0 then
+                targetHRP = GetEnemyInFront()
             end
 
-            -- Ataca apenas se ainda houver um alvo válido
-            if CurrentTarget then
-                local targetHRP = CurrentTarget.hrp
-                local direction = (targetHRP.Position - RootPart.Position).unit
-                RootPart.CFrame = CFrame.lookAt(RootPart.Position, RootPart.Position + Vector3.new(direction.X, 0, direction.Z))
-
+            -- Ataca o alvo se ele for válido
+            if targetHRP and targetHRP.hrp and targetHRP.hrp.Parent and targetHRP.humanoid.Health > 0 then
                 pcall(function()
-                    RequestAttack:InvokeServer(targetHRP.CFrame)
+                    RequestAttack:InvokeServer(targetHRP.hrp.CFrame)
                 end)
             end
         end
